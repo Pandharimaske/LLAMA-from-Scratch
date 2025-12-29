@@ -100,8 +100,8 @@ class SelfAttention(nn.Module):
         self.head_dim = args.dim // args.n_heads
 
         self.wq = nn.Linear(args.dim , args.n_heads * self.head_dim , bias=False)
-        self.wk = nn.Linear(args.dim , args.n_kv_heads * self.head_dim , bias=False)
-        self.wv = nn.Linear(args.dim , args.n_kv_heads * self.head_dim , bias=False)
+        self.wk = nn.Linear(args.dim , self.n_kv_heads * self.head_dim , bias=False)
+        self.wv = nn.Linear(args.dim , self.n_kv_heads * self.head_dim , bias=False)
         self.wo = nn.Linear(args.n_heads * self.head_dim , args.dim, bias=False)
 
         self.cache_k = torch.zeros((args.max_batch_size , args.max_seq_len , self.n_kv_heads , self.head_dim))
@@ -197,7 +197,7 @@ class EncoderBlock(nn.Module):
     def forward(self , x: torch.Tensor , start_pos: int , freqs_complex: torch.Tensor):
         # (B , Seq_Len , Dim) + (B , Seq_Len , Dim) = (B , Seq_Len , Dim)
         h = x + self.attention.forward(self.attention_norm(x) , start_pos , freqs_complex)
-        out = h + self.feed_forward.forward(self.ffn_norm(x))
+        out = h + self.feed_forward.forward(self.ffn_norm(h))
         return out
     
 
@@ -216,7 +216,7 @@ class  Transformer(nn.Module):
 
         self.layers = nn.ModuleList()
         for _ in range(args.n_layers):
-            self.layers.appedn(EncoderBlock(args))
+            self.layers.append(EncoderBlock(args))
 
         self.norm = RMSNorm(args.dim , eps=args.norm_eps)
         self.output = nn.Linear(args.dim , self.vocab_size , bias=False)
